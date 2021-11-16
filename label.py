@@ -1,6 +1,6 @@
 """
-
-bug报告请联系微信“”
+https://github.com/shu681/multiple-label-yolo5
+bug报告请联系微信: oo-shu6-oo
 """
 
 import cv2
@@ -13,8 +13,9 @@ from functools import partial
 winW = 1920
 winH = 1080
 pypath = os.path.dirname(__file__)
-global img, tkwin
+global img
 global point2, labels, txtfile, labelBox, origin_img, path
+tkwin = None
 point1 = []
 width = 960
 height = 540
@@ -24,7 +25,7 @@ text_size = 10
 font = ImageFont.truetype("{}/bdata.TTF".format(pypath), text_size, encoding="utf-8")
 
 def on_mouse(event, x, y, flags, param):
-    global img, point1, point2, labelBox
+    global img, point1, point2, labelBox, tkwin
     img2 = img.copy()
     if event == cv2.EVENT_LBUTTONDOWN:         #左键点击
         point1 = (x,y)
@@ -46,15 +47,19 @@ def on_mouse(event, x, y, flags, param):
         x1, x2, y1, y2 = min_x, min_y, min_x + width, min_y + height
         labelBox = [x1, x2, y1, y2]
         # threading.Thread(target=openMenu, args=(), daemon=True).start()
+        if tkwin is not None:
+            tkwin.destroy()
+            tkwin = None
         openMenu()
 def selectValue(value):
     # print(value)
-    global lastLabel, img
+    global lastLabel, img, tkwin
     value = value.strip('\n')
     lastLabel = value
     # print(labels, lastLabel)
     valIndex = labels.index(lastLabel)
     tkwin.destroy()
+    tkwin = None
     lines = [x.strip() for x in open(txtfile, 'r').readlines()]
     newLines = []
     for line in lines:
@@ -114,7 +119,6 @@ def drawImg(img):
 
     return np.array(pil_img)
 
-import threading
 def main():
     global img, labels, txtfile, winname, origin_img, path
     parser = argparse.ArgumentParser()
@@ -122,18 +126,16 @@ def main():
     args = parser.parse_args()
     path = args.path
 
-
-    # path = '{}'.format(path)
-    # path = './'
     file = open('{}/classes.txt'.format(pypath), "r")
+
     labels = [x.strip() for x in file.readlines()]
-    files = os.listdir(path)
-    # threading.Thread(target=openMenu, args=(), daemon=True).start()
-    # return
-    for file in files:
+    files = [file for file in os.listdir(path) if file.endswith('.jpg')]
+    index = 0
+    while index >= 0 and index < len(files):
+        file = files[index]
         if '.txt' in file:
+            index += 1
             continue
-        # img = cv2.imread('{}/{}'.format(path, file))
         img = cv2.imdecode(np.fromfile('{}/{}'.format(path, file), dtype=np.uint8),-1)
         origin_img = img.copy()
         winname = file
@@ -148,6 +150,11 @@ def main():
         key = cv2.waitKey(0)
         if key & 0xff == ord("n"):
             cv2.destroyWindow(winname)
+            index += 1
+            continue
+        if key & 0xff == ord("p"):
+            cv2.destroyWindow(winname)
+            index -= 1
             continue
         if key & 0xff == ord("q"):
             break
