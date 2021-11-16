@@ -1,6 +1,6 @@
 # multiple-label-yolo5
 
-批量标注yolo5格式的鸟类
+批量标注yolo5格式的小工具
 
 工作中会遇到比较专业的大量标注工作
 
