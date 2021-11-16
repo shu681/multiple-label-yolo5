@@ -12,7 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 from functools import partial
 winW = 1920
 winH = 1080
-pypath = os.path.dirname(__file__)
+pypath = "D:\label-sl"
+# pypath = os.path.dirname(__file__)
 global img
 global point2, labels, txtfile, labelBox, origin_img, path
 tkwin = None
