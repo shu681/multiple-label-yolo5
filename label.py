@@ -12,8 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 from functools import partial
 winW = 1920
 winH = 1080
-pypath = "D:\label-sl"
-# pypath = os.path.dirname(__file__)
+# pypath = "D:\label-sl"
+pypath = os.path.dirname(__file__)
 global img
 global point2, labels, txtfile, labelBox, origin_img, path
 tkwin = None
@@ -119,7 +119,7 @@ def drawImg(img):
         draw.text((x1, y1 - text_size - 10), labels[int(points[0])], (255, 255, 255), font=font)
 
     return np.array(pil_img)
-
+import json
 def main():
     global img, labels, txtfile, winname, origin_img, path
     parser = argparse.ArgumentParser()
@@ -128,15 +128,21 @@ def main():
     path = args.path
 
     file = open('{}/classes.txt'.format(pypath), "r")
+    lastfile = open('{}/last.txt'.format(pypath), "r")
+    last = lastfile.read()
+    lastfile.close()
+    if last == '':
+        last = '{}'
+    last = json.loads(last)
 
     labels = [x.strip() for x in file.readlines()]
     files = [file for file in os.listdir(path) if file.endswith('.jpg')]
     index = 0
+    pathUnicode = path.encode('unicode-escape').decode()
+    if pathUnicode in last:
+        index = int(last[pathUnicode])
     while index >= 0 and index < len(files):
         file = files[index]
-        if '.txt' in file:
-            index += 1
-            continue
         img = cv2.imdecode(np.fromfile('{}/{}'.format(path, file), dtype=np.uint8),-1)
         origin_img = img.copy()
         winname = file
@@ -148,6 +154,7 @@ def main():
         cv2.setMouseCallback(winname, on_mouse)
         cv2.imshow(winname, img)
 
+        last[pathUnicode] = index
         key = cv2.waitKey(0)
         if key & 0xff == ord("n"):
             cv2.destroyWindow(winname)
@@ -159,6 +166,9 @@ def main():
             continue
         if key & 0xff == ord("q"):
             break
+    lastfile = open('{}/last.txt'.format(pypath), "w")
+    lastfile.write(json.dumps(last))
+    lastfile.close()
  
 if __name__ == '__main__':
     main()

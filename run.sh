@@ -1,0 +1,1 @@
+python ~/label-sl/label.py --path `pwd`
