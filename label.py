@@ -12,8 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 from functools import partial
 winW = 1920
 winH = 1080
-pypath = "D:\label-sl"
-# pypath = os.path.dirname(__file__)
+# pypath = "D:\label-sl"
+pypath = os.path.dirname(__file__)
 global img
 global point2, labels, txtfile, labelBox, origin_img, path, labels_zh
 tkwin = None
@@ -149,6 +149,7 @@ def main():
     args = parser.parse_args()
     path = args.path
 
+    open('{}/last.txt'.format(pypath), "a+").close()
     file = open('{}/classes.txt'.format(pypath), "r")
     lastfile = open('{}/last.txt'.format(pypath), "r")
     last = lastfile.read()
