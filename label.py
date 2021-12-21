@@ -12,17 +12,16 @@ from PIL import Image, ImageDraw, ImageFont
 from functools import partial
 winW = 1920
 winH = 1080
-# pypath = "D:\label-sl"
-pypath = os.path.dirname(__file__)
+pypath = "D:\label-sl"
+# pypath = os.path.dirname(__file__)
 global img
-global point2, labels, txtfile, labelBox, origin_img, path
+global point2, labels, txtfile, labelBox, origin_img, path, labels_zh
 tkwin = None
 point1 = []
 width = 960
 height = 540
-lastLabel = 'bird'
 
-text_size = 10
+text_size = 18
 font = ImageFont.truetype("{}/bdata.TTF".format(pypath), text_size, encoding="utf-8")
 
 def on_mouse(event, x, y, flags, param):
@@ -37,7 +36,7 @@ def on_mouse(event, x, y, flags, param):
         cv2.imshow(winname, img2)
     elif event == cv2.EVENT_LBUTTONUP:         #左键释放
         point2 = (x,y)
-        min_x = min(point1[0],point2[0])     
+        min_x = min(point1[0],point2[0])
         min_y = min(point1[1],point2[1])
         width = abs(point1[0] - point2[0])
         height = abs(point1[1] -point2[1])
@@ -45,25 +44,25 @@ def on_mouse(event, x, y, flags, param):
             return
         cv2.rectangle(img2, point1, point2, (0,0,255), 2) 
         cv2.imshow(winname, img2)
-        x1, x2, y1, y2 = min_x, min_y, min_x + width, min_y + height
-        labelBox = [x1, x2, y1, y2]
+        x1, y1, x2, y2 = min_x, min_y, min_x + width, min_y + height
+        labelBox = [x1, y1, x2, y2]
         # threading.Thread(target=openMenu, args=(), daemon=True).start()
         if tkwin is not None:
-            tkwin.destroy()
+            try:
+                tkwin.destroy()
+            except:
+                tkwin = None
             tkwin = None
         openMenu()
 def selectValue(value):
-    # print(value)
-    global lastLabel, img, tkwin
+    global img, tkwin
     value = value.strip('\n')
-    lastLabel = value
-    # print(labels, lastLabel)
-    valIndex = labels.index(lastLabel)
     tkwin.destroy()
     tkwin = None
     lines = [x.strip() for x in open(txtfile, 'r').readlines()]
     newLines = []
-    for line in lines:
+    selected = 0
+    for n, line in enumerate(lines):
         points = line.split(' ')
         w = width * float(points[3])
         h = height * float(points[4])
@@ -75,21 +74,41 @@ def selectValue(value):
         centerX = x1 + w/2
         centerY = y1 + h/2
         if centerX > labelBox[0] and centerX < labelBox[2] and centerY > labelBox[1] and centerY < labelBox[3]:
-            points[0] = str(valIndex)
+            # print(value)
+            selected += 1
+            if value == '删除':
+                continue
+            else:
+                points[0] = str(labels_zh.index(value))
         newLines.append(' '.join(points))
-    # print('\n'.join(newLines))
+    
+    if selected == 0 and value != '删除':
+        [ox1, oy1, ox2, oy2] = labelBox
+        ow, oh = ox2 - ox1, oy2 - oy1
+        centerX, centerY = ow / 2 + ox1, oh / 2 + oy1
+
+        points = [
+            str(labels_zh.index(value)),
+            str(round(centerX / width, 6)),
+            str(round(centerY / height, 6)),
+            str(round(ow / width, 6)),
+            str(round(oh / height, 6)),
+        ]
+
+        newLines.append(' '.join(points))
     open(txtfile, 'w').write('\n'.join(newLines))
     img = drawImg(origin_img)
     cv2.imshow(winname, img)
 
 def openMenu():
-    global lastLabel, tkwin
+    global tkwin
     tkwin = Tk()
     # variable = StringVar(tkwin)
-    for label in labels:
+    for label in labels_zh:
         menu = Button(tkwin, text=label, command=partial(selectValue, label))
         menu.pack(padx=5, pady=10, side=LEFT)
-    # variable.set(lastLabel)
+    menu = Button(tkwin, text='删除', command=partial(selectValue, '删除'))
+    menu.pack(padx=5, pady=10, side=LEFT)
     mainloop()
 
 def drawImg(img):
@@ -116,12 +135,15 @@ def drawImg(img):
         x2 = x1 + w
         y2 = y1 + h
         x1, x2, y1, y2 = int(x1), int(x2), int(y1), int(y2)
-        draw.text((x1, y1 - text_size - 10), labels[int(points[0])], (255, 255, 255), font=font)
+        drawY = y1 - text_size - 10
+        if drawY < 20:
+            drawY = y1 + h
+        draw.text((x1, drawY), labels_zh[int(points[0])], (255, 255, 255), font=font)
 
     return np.array(pil_img)
 import json
 def main():
-    global img, labels, txtfile, winname, origin_img, path
+    global img, labels, txtfile, winname, origin_img, path, labels_zh
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default='', help='source')
     args = parser.parse_args()
@@ -134,8 +156,12 @@ def main():
     if last == '':
         last = '{}'
     last = json.loads(last)
-
+    
     labels = [x.strip() for x in file.readlines()]
+    labels_zh = [x.strip() for x in open('{}/classes_zh.txt'.format(pypath), "r", encoding ='utf-8').readlines()]
+    # class_dic_tozh = dict(zip(labels, labels_zh))
+    # class_dic_toen = dict(zip(labels_zh, labels))
+    
     files = [file for file in os.listdir(path) if file.endswith('.jpg')]
     index = 0
     pathUnicode = path.encode('unicode-escape').decode()
@@ -145,7 +171,7 @@ def main():
         file = files[index]
         img = cv2.imdecode(np.fromfile('{}/{}'.format(path, file), dtype=np.uint8),-1)
         origin_img = img.copy()
-        winname = file
+        winname = '{} {}/{}'.format(file, index + 1, len(files))
         cv2.namedWindow(winname)
 
         txtfile = '{}/{}'.format(path, file).replace('.jpg', '.txt')
@@ -155,14 +181,27 @@ def main():
         cv2.imshow(winname, img)
 
         last[pathUnicode] = index
-        key = cv2.waitKey(0)
-        if key & 0xff == ord("n"):
+        key = cv2.waitKeyEx(0)
+        # print(key)
+        if key == 2359296:
+            cv2.destroyWindow(winname)
+            index = 0
+            continue
+        if key == 2293760:
+            cv2.destroyWindow(winname)
+            index = len(files) - 1
+            continue
+        if key & 0xff == ord("n") or key == 2555904:
             cv2.destroyWindow(winname)
             index += 1
+            if index == len(files):
+                index = 0
             continue
-        if key & 0xff == ord("p"):
+        if key & 0xff == ord("p") or key == 2424832:
             cv2.destroyWindow(winname)
             index -= 1
+            if index == -1:
+                index = len(files) - 1
             continue
         if key & 0xff == ord("q"):
             break

@@ -11,3 +11,7 @@ bailu
 fanzuiyu
 huihe
 douyan
+xiaopiti
+huiyan
+chimaya
+xique

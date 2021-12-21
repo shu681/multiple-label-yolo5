@@ -1,3 +1,3 @@
 setlocal EnableDelayedExpansion
 echo %cd%
-start label.exe --path %cd%
+start python D:\label-sl\label.py --path %cd%
